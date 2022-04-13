@@ -25,23 +25,25 @@ df['domain'] = df['email'].str.split('@').str[1]
 # get data from ip address
 url_list = 'http://ip-api.com/json/' + df['ip_address'].values
 df2 = []
-for url in url_list:
+for url in url_list[:5]:
     try:
         r = requests.get(url, timeout=10)
         # sleep to stay under requests limit 
         time.sleep(1)
-        print(r)
         json = r.json()
+        print(json)
         df2.append(json)
     except requests.exceptions.Timeout:
         print("Timeout occurred")
         
-
 # create df from json list
 df2 = pd.DataFrame(df2)
+df2.rename(columns={'query': 'ip_address', 'regionName': 'region'}, inplace=True)
 print(df2)
-
-
+# merge api df with original df 
+df = df.merge(df2, on='ip_address', how='left',)
+df.drop(columns=['countryCode','region','zip','timezone','as'], inplace=True)
+print(df)
 
 # load
-# print(df)
+df.to_csv('out.csv', encoding='utf-8', index=False)
