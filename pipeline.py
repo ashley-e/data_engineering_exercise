@@ -13,15 +13,17 @@ import requests
 from sqlalchemy import create_engine
 import psycopg2
 import io
-
-
 from yaml import load
 
-# extract
+
+
+# EXTRACT
+
 file_dir = os.path.join(os.getcwd(), 'DATA.csv')
 df = pd.read_csv(file_dir)
 
-# transform
+# TRANSFORM
+
 # get domains from email
 df['domain'] = df['email'].str.split('@').str[1]
 
@@ -31,7 +33,7 @@ df2 = []
 for url in url_list:
     try:
         r = requests.get(url, timeout=10)
-        # sleep to stay under requests limit 
+        # sleep to stay under api request limit 
         time.sleep(1)
         json = r.json()
         print(json)
@@ -42,10 +44,9 @@ for url in url_list:
 # create df from json list
 df2 = pd.DataFrame(df2)
 df2.rename(columns={'query': 'ip_address', 'regionName': 'region'}, inplace=True)
-print(df2)
+
 # merge api df with original df 
 df = df.merge(df2, on='ip_address', how='left',)
-print(df)
 
 # update ip status to reason if failed
 df['status'] = np.where(df['status'] == 'fail', df['message'], df['status'])
@@ -74,9 +75,11 @@ if df.duplicated().any():
 else: 
     print('No duplicates found.')
 
-# load
+# LOAD
+
 # create csv output
 df.to_csv('out.csv', encoding='utf-8', index=False)
+
 # load to postgresdb
 # engine = create_engine('postgresql://postgres:postgres@localhost:5432/data_db')
 # df.to_sql('data', engine, if_exists='replace',index=False)
