@@ -1,14 +1,6 @@
-ctypes 
-ipaddress 
-operator 
 os
-string 
 time
-typing 
-matplotlib 
-numpy  
-pandas  
+numpy
+pandas
 requests
-sqlalchemy 
-psycopg2
-io
+sqlite3
