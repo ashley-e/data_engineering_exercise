@@ -69,8 +69,8 @@ else:
 # LOAD
 
 # create csv output
-df.to_csv('out.csv', encoding='utf-8', index=False)
+df.to_csv('data_results.csv', encoding='utf-8', index=False)
 
 # load to db
 con = sqlite3.connect("data.sqlite")
-df.to_sql("data.sqlite", con, if_exists="replace")
+df.to_sql("data_results.sqlite", con, if_exists="replace")
