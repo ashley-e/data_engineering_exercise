@@ -1,19 +1,10 @@
 # import required dependencies
-from ctypes import addressof
-from ipaddress import ip_address
-from operator import index
 import os
-from string import whitespace
 import time
-from typing import KeysView
-from matplotlib import transforms
 import numpy as np
 import pandas as pd
 import requests
-from sqlalchemy import create_engine
-import psycopg2
-import io
-from yaml import load
+import sqlite3
 
 
 
@@ -27,8 +18,8 @@ df = pd.read_csv(file_dir)
 # get domains from email
 df['domain'] = df['email'].str.split('@').str[1]
 
-# get data from ip address
-url_list = 'http://ip-api.com/json/' + df['ip_address'].values
+# get data from ip address, select fields
+url_list = 'http://ip-api.com/json/' + df['ip_address'].values + '?fields=status,message,country,regionName,city,lat,lon,query'
 df2 = []
 for url in url_list:
     try:
@@ -46,25 +37,25 @@ df2 = pd.DataFrame(df2)
 df2.rename(columns={'query': 'ip_address', 'regionName': 'region'}, inplace=True)
 
 # merge api df with original df 
-df = df.merge(df2, on='ip_address', how='left',)
+df = df.merge(df2, on='ip_address', how='left')
 
 # update ip status to reason if failed
-df['status'] = np.where(df['status'] == 'fail', df['message'], df['status'])
+if 'message' in df.columns:
+    df['status'] = np.where(df['status'] == 'fail', df['message'], df['status'])
+    df.drop('message', axis=1, inplace=True)
 
-# drop extra columns
-df.drop(columns=['countryCode','region','zip','timezone','as','message'], inplace=True)
-
-# check for uniqueness in index
+# check for uniqueness
 if df['id'].is_unique:
     print('Records are unique.')
-    df.set_index('id', inplace=True)
 
 # strip leading and trailing whitespace
-df.str.strip(inplace=True)
+df = df.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
 
 # check for missing data
 if df.isna().any().sum():
-    print((100 * df.isna().any().sum() / df.any().sum()) + '%% of data is missing.')
+    percent = (100 * df['status'].value_counts(normalize=True).success)
+    reason = df['status'].dropna().unique()
+    print(str(percent) + '% of ip-api records are available.')
 else:
     print('No missing data.')
 
@@ -80,6 +71,6 @@ else:
 # create csv output
 df.to_csv('out.csv', encoding='utf-8', index=False)
 
-# load to postgresdb
-# engine = create_engine('postgresql://postgres:postgres@localhost:5432/data_db')
-# df.to_sql('data', engine, if_exists='replace',index=False)
+# load to db
+con = sqlite3.connect("data.sqlite")
+df.to_sql("data.sqlite", con, if_exists="replace")
